@@ -5,3 +5,5 @@
 - **Secrets stay on the server and are not in git:** `.env.prod` (app settings, API keys) and `deploy/.env` (`DOMAIN`, `MCP_SECRET`).
 - **Ops MCP connector:** `deploy/ops-mcp.py` (systemd `motion-ops-mcp`), served by Caddy at `https://$DOMAIN/ops/$MCP_SECRET`. Add it in claude.ai → Settings → Connectors → Add custom connector. Its tools are: status, logs, redeploy, deploy_log, restart, env_status, set_env (only whitelisted keys). Anyone who has the URL can use these tools, so keep it private.
 - First-time setup on a new server: clone the repo, create `.env.prod` and `deploy/.env` (`DOMAIN=...`), then run `deploy/install.sh` and `deploy/update.sh --force`.
+
+Last auto-deploy test: 2026-11-14 21:55 UTC
