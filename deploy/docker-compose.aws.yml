@@ -1,0 +1,26 @@
+# AWS EC2 (t3.small): one container for api+bot+worker, Caddy in front (automatic HTTPS).
+# Variables DOMAIN and MCP_SECRET come from deploy/.env (server only, not in git).
+services:
+  app:
+    build: ..
+    env_file: ../.env.prod
+    environment:
+      ROLE: all
+      NODE_ENV: production
+      DEV_AUTH: "false"
+    volumes: ["data:/data"]
+    restart: unless-stopped
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+      MCP_SECRET: ${MCP_SECRET}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy:/data
+    restart: unless-stopped
+volumes:
+  data:
+  caddy:

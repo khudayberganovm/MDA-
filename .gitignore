@@ -7,3 +7,5 @@ media/*
 webapp/dist
 dist
 .DS_Store
+.env.prod
+deploy/.env
