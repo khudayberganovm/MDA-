@@ -1,0 +1,57 @@
+// SQLite for MVP. To move to PostgreSQL: change provider + DATABASE_URL, run `prisma migrate dev`.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  telegramId BigInt    @unique
+  name       String
+  username   String?
+  language   String    @default("uz") // uz | ru
+  createdAt  DateTime  @default(now())
+  projects   Project[]
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt       String
+  options      String   // JSON: duration, language, voice, style, cta, businessName, logoPath
+  script       String?
+  storyboard   String?  // JSON (Zod-validated Storyboard)
+  duration     Int      // requested seconds (15 | 30)
+  status       String   @default("draft") // draft|queued|planning|sourcing|voicing|rendering|completed|failed
+  error        String?
+  outputPath   String?
+  demo         Boolean  @default(false)
+  attributions String?  // JSON list of stock-media credits
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  jobs         Job[]
+
+  @@index([userId, createdAt])
+}
+
+model Job {
+  id         String    @id @default(cuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status     String    @default("queued") // queued|running|done|failed
+  stage      String    @default("queued")
+  progress   Float     @default(0)
+  error      String?
+  retryCount Int       @default(0)
+  runAfter   DateTime  @default(now())
+  lockedAt   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([status, runAfter])
+}
