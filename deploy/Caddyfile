@@ -1,0 +1,14 @@
+{$DOMAIN} {
+	# Ops MCP connector (only reachable with the secret path)
+	@ops path /ops/{$MCP_SECRET} /ops/{$MCP_SECRET}/*
+	handle @ops {
+		reverse_proxy host.docker.internal:8090
+	}
+	# No OAuth here: answer discovery probes with 404 instead of the SPA
+	handle /.well-known/* {
+		respond 404
+	}
+	handle {
+		reverse_proxy app:8080
+	}
+}
