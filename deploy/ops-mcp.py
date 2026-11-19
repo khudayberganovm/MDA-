@@ -21,13 +21,10 @@ SERVICES = ("app", "caddy")
 PORT = int(os.environ.get("OPS_MCP_PORT", "8090"))
 
 EDITABLE_KEYS = {
-    "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "PEXELS_API_KEY", "ELEVENLABS_API_KEY",
-    "ELEVENLABS_MODEL_UZ", "ELEVENLABS_MODEL_RU",
-    "ELEVENLABS_VOICE_UZ_MALE", "ELEVENLABS_VOICE_UZ_FEMALE",
-    "ELEVENLABS_VOICE_RU_MALE", "ELEVENLABS_VOICE_RU_FEMALE",
-    "ENABLE_PAID_APIS", "DEMO_MODE", "BOT_TOKEN",
-    "MAX_PROJECTS_PER_DAY", "MAX_ACTIVE_JOBS_PER_USER", "MAX_JOB_RETRIES",
-    "RENDER_CONCURRENCY", "RENDER_TIMEOUT_MS", "KEEP_OUTPUT_DAYS",
+    "BOT_TOKEN", "ADMIN_IDS", "ADMIN_CHAT_ID", "SUPPORT_USERNAME", "REVISIONS_PER_ORDER",
+    "PAYME_MERCHANT_ID", "PAYME_KEY", "PAYME_TEST",
+    "CLICK_SERVICE_ID", "CLICK_MERCHANT_ID", "CLICK_SECRET_KEY",
+    "MANUAL_PAY_INFO",
 }
 SECRET_LIKE = re.compile(r"KEY|TOKEN|SECRET")
 
@@ -153,10 +150,10 @@ TOOLS = {
                 {"type": "object", "properties": {"service": {"type": "string", "enum": list(SERVICES), "default": "app"}}}),
     "env_status": (t_env_status, "List app settings in .env.prod. Secret values are shown only as set/EMPTY.",
                    {"type": "object", "properties": {}}),
-    "set_env": (t_set_env, "Set app settings (API keys, voice IDs, limits, ENABLE_PAID_APIS, DEMO_MODE) and recreate the app container.",
+    "set_env": (t_set_env, "Set app settings (BOT_TOKEN, ADMIN_IDS, ADMIN_CHAT_ID, SUPPORT_USERNAME, payment settings) and recreate the app container.",
                 {"type": "object", "required": ["values"], "properties": {
                     "values": {"type": "object", "additionalProperties": {"type": "string"},
-                               "description": "Map of KEY to new value, e.g. {\"ENABLE_PAID_APIS\": \"true\"}"}}}),
+                               "description": "Map of KEY to new value, e.g. {\"ADMIN_IDS\": \"123456789\"}"}}}),
 }
 
 

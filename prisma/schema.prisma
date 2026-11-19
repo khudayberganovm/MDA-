@@ -1,4 +1,5 @@
-// SQLite for MVP. To move to PostgreSQL: change provider + DATABASE_URL, run `prisma migrate dev`.
+// MOTION AI: video ad ordering service for tour agencies.
+// SQLite for MVP. To move to PostgreSQL: change provider + DATABASE_URL.
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,49 +10,149 @@ datasource db {
 }
 
 model User {
-  id         Int       @id @default(autoincrement())
-  telegramId BigInt    @unique
+  id         Int         @id @default(autoincrement())
+  telegramId BigInt      @unique
   name       String
   username   String?
-  language   String    @default("uz") // uz | ru
-  createdAt  DateTime  @default(now())
-  projects   Project[]
+  language   String      @default("uz") // uz | ru
+  credits    Int         @default(0) // prepaid videos left
+  botState   String? // e.g. "rev:12" while the bot waits for a revision note
+  createdAt  DateTime    @default(now())
+  agency     Agency?
+  orders     Order[]
+  purchases  Purchase[]
+  files      FileAsset[]
 }
 
-model Project {
-  id           String   @id @default(cuid())
-  userId       Int
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  prompt       String
-  options      String   // JSON: duration, language, voice, style, cta, businessName, logoPath
-  script       String?
-  storyboard   String?  // JSON (Zod-validated Storyboard)
-  duration     Int      // requested seconds (15 | 30)
-  status       String   @default("draft") // draft|queued|planning|sourcing|voicing|rendering|completed|failed
-  error        String?
-  outputPath   String?
-  demo         Boolean  @default(false)
-  attributions String?  // JSON list of stock-media credits
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  jobs         Job[]
+// Tour agency profile, reused for every order.
+model Agency {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  instagram  String
+  phone      String
+  telegram   String?
+  city       String?
+  logoFileId String?
+  updatedAt  DateTime @updatedAt
+}
+
+model Template {
+  id          Int      @id @default(autoincrement())
+  title       String
+  category    String
+  description String
+  durationSec Int      @default(30)
+  format      String   @default("9:16")
+  previewPath String? // media-relative mp4, public
+  posterPath  String? // media-relative image, public
+  agentNotes  String? // internal instructions for the video agent (admins only)
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+}
+
+model Package {
+  id        Int        @id @default(autoincrement())
+  title     String
+  videos    Int
+  price     Int // UZS
+  oldPrice  Int?
+  badge     String?
+  active    Boolean    @default(true)
+  sortOrder Int        @default(0)
+  purchases Purchase[]
+}
+
+// A package purchase: when paid, `videos` are added to the user's credits.
+model Purchase {
+  id        Int         @id @default(autoincrement())
+  userId    Int
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageId Int
+  package   Package     @relation(fields: [packageId], references: [id])
+  videos    Int
+  amount    Int // UZS
+  status    String      @default("pending") // pending | paid | cancelled
+  provider  String // payme | click | manual | dev
+  paidAt    DateTime?
+  orderId   Int? // order waiting for this payment
+  createdAt DateTime    @default(now())
+  txs       PaymentTx[]
+
+  @@index([userId])
+}
+
+// Provider-side transaction (Payme / Click). Times are unix ms.
+model PaymentTx {
+  id          Int      @id @default(autoincrement())
+  provider    String
+  extId       String
+  purchaseId  Int
+  purchase    Purchase @relation(fields: [purchaseId], references: [id])
+  amount      Int // tiyin
+  state       Int // 1 created, 2 performed, -1 cancelled, -2 cancelled after perform
+  createTime  BigInt
+  performTime BigInt   @default(0)
+  cancelTime  BigInt   @default(0)
+  reason      Int?
+
+  @@unique([provider, extId])
+  @@index([purchaseId])
+}
+
+model Order {
+  id             Int          @id @default(autoincrement())
+  userId         Int
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId     Int
+  template       Template     @relation(fields: [templateId], references: [id])
+  status         String       @default("awaiting_payment") // awaiting_payment|new|in_progress|delivered|revision|completed|cancelled
+  brief          String // JSON (Brief)
+  agency         String // JSON snapshot of the agency profile at order time
+  creditUsed     Boolean      @default(false)
+  revisionsLeft  Int
+  revisionNote   String?
+  assignee       String?
+  adminMessageId Int? // order card in the admin group
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deliveredAt    DateTime?
+  files          FileAsset[]
+  events         OrderEvent[]
 
   @@index([userId, createdAt])
+  @@index([status])
 }
 
-model Job {
-  id         String    @id @default(cuid())
-  projectId  String
-  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  status     String    @default("queued") // queued|running|done|failed
-  stage      String    @default("queued")
-  progress   Float     @default(0)
-  error      String?
-  retryCount Int       @default(0)
-  runAfter   DateTime  @default(now())
-  lockedAt   DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+model OrderEvent {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type      String
+  note      String?
+  by        String?
+  createdAt DateTime @default(now())
 
-  @@index([status, runAfter])
+  @@index([orderId])
+}
+
+model FileAsset {
+  id        String   @id @default(cuid())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   Int?
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kind      String // logo | material | result
+  path      String? // media-relative path (null when only stored in Telegram)
+  tgFileId  String?
+  name      String
+  mime      String
+  size      Int
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
 }

@@ -1,91 +1,53 @@
 # MOTION AI
 
-A Telegram bot and Mini App that turn a text prompt into a 9:16 ad video: script → scenes → stock clips → AI voice → subtitles → MP4.
+Turagentliklar uchun reklama videolariga buyurtma berish xizmati: Telegram bot va Mini App.
 
-Stack: TypeScript, Node 22, grammY, Fastify, Prisma + SQLite, React + Vite + Tailwind, Remotion (Chrome headless + FFmpeg), Claude API, Pexels, ElevenLabs.
-Output: 1080×1920, 30 fps, H.264 + AAC MP4.
+Mijoz (turagentlik) Mini App'da shablon tanlaydi, tur ma'lumotlarini yozadi, materiallarini yuklaydi va video paketini to'laydi. Buyurtma jamoaning Telegram guruhiga Claude agenti uchun tayyor brif bilan birga keladi. Jamoa videoni Claude'da tayyorlaydi va guruhga yuboradi, bot uni mijozga yetkazadi. Mijoz videoni qabul qiladi yoki tahrir so'raydi.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) and [TODO.md](TODO.md).
+## Imkoniyatlar
 
-## Quick start (local)
+**Mijoz (Mini App)**
+- Shablonlar katalogi: kategoriyalar, 9:16 namuna videolar
+- Agentlik profili (nomi, logo, Instagram, telefon, Telegram, shahar), bir marta to'ldiriladi
+- Buyurtma: yo'nalish, sanalar, narx, narxga nima kirishi, mehmonxona, aksiya, video tili va ovoz, izoh, rasm va videolar (10 tagacha, har biri 50 MB gacha)
+- Video paketlari (1 / 5 / 10 video): balans saqlanadi, har bir buyurtmaga 1 video yechiladi
+- To'lov: Payme, Click yoki karta o'tkazmasi (admin tasdiqlaydi)
+- Buyurtma holati, tarix, tayyor videoni ko'rish va yuklab olish, qabul qilish yoki tahrir so'rash (sukut bo'yicha 2 ta bepul)
+
+**Jamoa**
+- Telegram guruhga buyurtma kartasi keladi. Tugmalar: «Ishga olish», «Claude brifi» (.md fayl), «Materiallar», «Bekor qilish»
+- Tayyor videoni kartaga javob (reply) qilib yuborish kifoya: bot uni mijozga avtomatik yetkazadi (hajm cheklovi yo'q)
+- Karta orqali to'lovlarni guruhda bir tugma bilan tasdiqlash
+- Mini App'dagi Admin bo'limi: buyurtmalar (filtrlar, Claude brifini nusxalash, video yuklash, yakunlash, bekor qilish), shablonlar (namuna video, muqova, agent uchun ko'rsatma), paket narxlari, to'lovlar, balansga bonus video qo'shish, statistika
+
+## Sozlash (`.env`)
+
+| O'zgaruvchi | Vazifasi |
+| --- | --- |
+| `BOT_TOKEN` | @BotFather bergan token |
+| `PUBLIC_URL`, `WEBAPP_URL` | Serverning HTTPS manzili |
+| `ADMIN_IDS` | Admin Telegram ID'lari, vergul bilan. ID'ni botga `/myid` yozib bilasiz |
+| `ADMIN_CHAT_ID` | Jamoa guruhi. Botni guruhga qo'shing va u yerda `/chatid` yozing |
+| `SUPPORT_USERNAME` | Mijozlarga ko'rsatiladigan yordam akkaunti (@ belgisisiz) |
+| `PAYME_MERCHANT_ID`, `PAYME_KEY`, `PAYME_TEST` | Payme Merchant API. Kabinetdagi endpoint: `https://<domen>/pay/payme` |
+| `CLICK_SERVICE_ID`, `CLICK_MERCHANT_ID`, `CLICK_SECRET_KEY` | Click SHOP API. Prepare: `https://<domen>/pay/click/prepare`, Complete: `https://<domen>/pay/click/complete` |
+| `MANUAL_PAY_INFO` | Karta rekvizitlari (yangi qator uchun `\n`). Bo'sh bo'lsa bu usul ko'rinmaydi |
+| `REVISIONS_PER_ORDER` | Bepul tahrirlar soni (sukut bo'yicha 2) |
+
+To'lov usuli faqat sozlangan bo'lsa ko'rinadi. Admin guruhi a'zolari jamoa hisoblanadi: ular buyurtmani ishga olishi, bekor qilishi va video yuborishi mumkin. Shuning uchun guruh yopiq bo'lsin.
+
+## Lokal ishga tushirish
 
 ```bash
-npm install
-cp .env.example .env          # then edit it
-npx prisma db push            # creates SQLite DB
-npm run build:web             # builds the Mini App into webapp/dist
-npm start                     # api + bot + worker in one process
-```
-Open http://localhost:8080. Outside Telegram it uses dev auth (`DEV_AUTH=true`, refused when `NODE_ENV=production`).
-
-Run the roles separately (recommended in production):
-```bash
-npm run api      # Fastify + Mini App
-npm run bot      # Telegram bot (needs BOT_TOKEN)
-npm run worker   # render worker (one job at a time)
-```
-For Mini App development with hot reload, run `npm run dev:web` (port 5173, proxies /api to 8080).
-
-On the first render, Remotion downloads Chrome Headless Shell (~150 MB). Set `BROWSER_EXECUTABLE` to use a binary you already have.
-
-## Modes and keys
-
-| Provider | Needed for | If missing |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | script and storyboard | with `DEMO_MODE=true`: a fixed sample script, labelled **DEMO**; otherwise the job fails with a clear message |
-| `PEXELS_API_KEY` | stock clips | animated typography scenes |
-| `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_*` | narration | demo storyboards use the bundled fixtures (macOS `say`, not AI); AI storyboards fail with a clear message |
-| `BOT_TOKEN` | bot, notifications, initData auth | bot is disabled |
-
-Paid APIs are only called when the key is set **and** `ENABLE_PAID_APIS=true`.
-ElevenLabs: the default models are `eleven_v3` for Uzbek and `eleven_multilingual_v2` for Russian. Check Uzbek support for your model and voice on ElevenLabs' models page before you rely on it.
-
-## Telegram setup
-1. Create a bot with @BotFather and put its token in `BOT_TOKEN`.
-2. Expose the API over HTTPS (a domain with Caddy/nginx, or a tunnel such as `cloudflared tunnel --url http://localhost:8080`). Set `PUBLIC_URL` and `WEBAPP_URL` to that HTTPS URL.
-3. Optionally set the Mini App URL in BotFather (`/newapp` or Menu Button). The bot also sets the menu button itself.
-
-## Tests
-```bash
-npm run typecheck
-npm run test:e2e                                   # 30 s professional, uz
-npm run test:e2e -- --style minimal --duration 15
-```
-The e2e test starts the API, creates a project with dev auth, runs the worker until the project finishes, checks access control, downloads the file through a signed link and runs ffprobe on it.
-
-## Docker
-```bash
-docker compose up -d --build
-```
-This starts the `app` (API + Mini App), `bot` and `worker` services, which share the `/data` volume (SQLite + media).
-
-## Oracle Cloud Always Free (ARM64 Ubuntu): not tested yet
-1. Create an Ampere A1 VM (4 OCPU / 24 GB) with Ubuntu 22.04/24.04. Open port 443 in the VCN security list and in `iptables`.
-2. Install Docker: `curl -fsSL https://get.docker.com | sh`. Then clone the repo, create `.env` and run `docker compose up -d --build`.
-3. Put Caddy in front for HTTPS: `caddy reverse-proxy --from your.domain --to localhost:8080`.
-
-ARM64 caveat: Remotion publishes Linux ARM64 builds of its compositor and of Chrome Headless Shell, but this project has **not** been rendered on ARM64 Linux. If the browser download fails there, install Chromium (`apt install chromium`), set `BROWSER_EXECUTABLE=/usr/bin/chromium`, and test with `npm run test:e2e`. The fallback is an x86_64 VM.
-
-## Push to GitHub
-```bash
-git remote add origin git@github.com:<you>/motion-ai.git
-git push -u origin main
+npm ci
+cp .env.example .env       # DEV_AUTH=true, ADMIN_IDS ga o'zingizning dev ID'ingizni yozing
+npm run db:init
+npm run build:web && npm start   # http://localhost:8080/?dev=<id>
+npm run test:e2e           # 69 ta avtomatik tekshiruv: buyurtma, Payme, Click, admin, ruxsatlar
 ```
 
-## Verification (2026-11-14, macOS arm64, Node 22.23.5, DEMO mode, no paid keys)
-| Check | Result |
-|---|---|
-| `npm install`, `tsc --noEmit`, `vite build` | ✅ |
-| `prisma db push` (SQLite) | ✅ |
-| API starts, Mini App loads at :8080 (dev auth) | ✅ |
-| Prompt submitted from the Mini App → project + job queued | ✅ |
-| Storyboard | ✅ demo storyboard, labelled DEMO (no Claude key) |
-| Media | ✅ typography fallback (no Pexels key) |
-| Narration | ✅ demo fixture audio (no ElevenLabs key) |
-| Remotion render → MP4 | ✅ 3 jobs rendered from the queue, one after another |
-| ffprobe | ✅ 30.00 s, h264 1080×1920 + aac |
-| Saved + signed download (200), tampered link (403), other user (404) | ✅ |
-| Bot with real BOT_TOKEN, Claude/Pexels/ElevenLabs live calls, Docker, ARM64 Linux | ❌ not tested (no credentials / Docker in the dev environment) |
+`DEV_AUTH=true` bo'lsa Telegram'siz kirish va «Test to'lov» usuli ishlaydi. Production'da bu rejim o'chiq.
 
-Render time: about 3 minutes per 30 s video on this Mac (RENDER_CONCURRENCY=2).
-If Remotion's automatic browser download is slow, download Chrome Headless Shell yourself and set `BROWSER_EXECUTABLE`.
+## Deploy
+
+AWS'da deploy avtomatik: `main`'ga push qilingach 1 daqiqa ichida server yangilanadi. Batafsil: `deploy/README.md`. Boshqa serverda: `docker compose up -d --build`.
