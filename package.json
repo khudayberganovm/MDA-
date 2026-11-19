@@ -1,6 +1,6 @@
 {
   "name": "motion-ai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,32 +9,22 @@
   "scripts": {
     "dev": "tsx watch src/main.ts all",
     "dev:web": "vite --config webapp/vite.config.ts",
-    "api": "tsx src/main.ts api",
-    "bot": "tsx src/main.ts bot",
-    "worker": "tsx src/main.ts worker",
     "start": "tsx src/main.ts all",
     "build:web": "vite build --config webapp/vite.config.ts",
     "build": "prisma generate && tsc --noEmit && npm run build:web",
     "typecheck": "tsc --noEmit",
     "db:init": "prisma db push",
-    "demo:fixtures": "tsx scripts/make-demo-fixtures.ts",
-    "test:e2e": "tsx scripts/e2e.ts",
-    "remotion:studio": "remotion studio remotion/index.ts"
+    "test:e2e": "tsx scripts/e2e.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
     "@fastify/multipart": "^10.1.8",
     "@fastify/static": "^10.1.11",
     "@prisma/client": "^6.19.3",
-    "@remotion/bundler": "^4.0.543",
-    "@remotion/cli": "^4.0.543",
-    "@remotion/renderer": "^4.0.543",
     "fastify": "^5.12.8",
     "grammy": "^1.46.0",
     "prisma": "^6.19.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "remotion": "^4.0.543",
     "tsx": "^4.23.15",
     "zod": "^4.6.7"
   },

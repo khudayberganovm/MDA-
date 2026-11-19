@@ -1,26 +1,15 @@
+# Local / generic deploy. For AWS see deploy/docker-compose.aws.yml.
 services:
   app:
     build: .
     env_file: .env
     environment:
-      ROLE: api            # API + Mini App
+      ROLE: all
       NODE_ENV: production
       DEV_AUTH: "false"
+      DATABASE_URL: file:/data/orders.db
     ports: ["8080:8080"]
     volumes: ["data:/data"]
     restart: unless-stopped
-  bot:
-    build: .
-    env_file: .env
-    environment: { ROLE: bot, NODE_ENV: production, DEV_AUTH: "false" }
-    volumes: ["data:/data"]
-    restart: unless-stopped
-  worker:
-    build: .
-    env_file: .env
-    environment: { ROLE: worker, NODE_ENV: production, DEV_AUTH: "false" }
-    volumes: ["data:/data"]
-    restart: unless-stopped
-    deploy: { resources: { limits: { cpus: "3", memory: 6g } } }
 volumes:
   data:
