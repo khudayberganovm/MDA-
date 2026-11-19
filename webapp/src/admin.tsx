@@ -179,6 +179,17 @@ function TemplateForm({ t, done }: { t: Template | null; done: () => void }) {
     setBusy(kind); setErr(""); setPr(0);
     try { setCur(await upload<Template>(`/api/admin/templates/${cur.id}/${kind}`, file, setPr)); toast("Yuklandi ✅"); } catch (e) { setErr(errMsg(e)); } finally { setBusy(""); }
   };
+  const removeMedia = async (kind: "preview" | "poster") => {
+    if (!cur || !(await confirmBox(kind === "preview" ? "Namuna video o‘chirilsinmi?" : "Muqova rasm o‘chirilsinmi?"))) return;
+    setBusy(kind); setErr("");
+    try { setCur(await api<Template>(`/api/admin/templates/${cur.id}/${kind}`, { method: "DELETE" })); toast("O‘chirildi"); } catch (e) { setErr(errMsg(e)); } finally { setBusy(""); }
+  };
+  const mediaRow = (kind: "preview" | "poster", has: boolean, label: string, ref: React.RefObject<HTMLInputElement | null>) => (
+    <div className="flex gap-2">
+      <Button variant="ghost" className="py-2.5 text-sm" disabled={!!busy} onClick={() => ref.current?.click()}>{busy === kind ? `${Math.round(pr * 100)}%` : `${label}${has ? " ↻" : ""}`}</Button>
+      {has && <button type="button" aria-label="O‘chirish" disabled={!!busy} onClick={() => removeMedia(kind)} className="shrink-0 rounded-2xl border border-red-500/30 bg-red-500/10 px-3 text-red-300 disabled:opacity-40">🗑</button>}
+    </div>
+  );
   return (
     <div className="space-y-4">
       <button onClick={done} className="text-sm text-zinc-400">← Shablonlar</button>
@@ -189,8 +200,8 @@ function TemplateForm({ t, done }: { t: Template | null; done: () => void }) {
           <div className="flex-1 space-y-2">
             <input ref={vRef} type="file" accept="video/mp4,video/quicktime" hidden onChange={(e) => e.target.files?.[0] && media("preview", e.target.files[0])} />
             <input ref={pRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => e.target.files?.[0] && media("poster", e.target.files[0])} />
-            <Button variant="ghost" className="py-2.5 text-sm" disabled={!!busy} onClick={() => vRef.current?.click()}>{busy === "preview" ? `${Math.round(pr * 100)}%` : "🎬 Namuna video"}</Button>
-            <Button variant="ghost" className="py-2.5 text-sm" disabled={!!busy} onClick={() => pRef.current?.click()}>{busy === "poster" ? `${Math.round(pr * 100)}%` : "🖼 Muqova rasm"}</Button>
+            {mediaRow("preview", Boolean(cur.previewUrl), "🎬 Namuna video", vRef)}
+            {mediaRow("poster", Boolean(cur.posterUrl), "🖼 Muqova rasm", pRef)}
             <p className="text-[11px] text-zinc-500">MP4, 9:16, 60 MB gacha. Mijozlar katalogda ko‘radi.</p>
           </div>
         </div>
