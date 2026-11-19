@@ -352,6 +352,18 @@ export async function startApi() {
     return templateView(updated, true);
   });
 
+  app.delete("/api/admin/templates/:id/:media", async (req) => {
+    const id = intParam(req);
+    const media = (req.params as { media: string }).media;
+    if (media !== "preview" && media !== "poster") throw new HttpError(400, "bad media");
+    const t = await db.template.findUnique({ where: { id } });
+    if (!t) throw new HttpError(404, "not found");
+    const old = media === "preview" ? t.previewPath : t.posterPath;
+    const updated = await db.template.update({ where: { id }, data: media === "preview" ? { previewPath: null } : { posterPath: null } });
+    if (old) fs.rmSync(mediaPath(old), { force: true });
+    return templateView(updated, true);
+  });
+
   app.get("/api/admin/packages", async () => db.package.findMany({ orderBy: [{ sortOrder: "asc" }, { videos: "asc" }] }));
   app.post("/api/admin/packages", async (req) => db.package.create({ data: PackageInput.parse(req.body) }));
   app.put("/api/admin/packages/:id", async (req) => db.package.update({ where: { id: intParam(req) }, data: PackageInput.parse(req.body) }));

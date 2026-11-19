@@ -177,6 +177,10 @@ try {
   r = await upload(ADMIN, `/api/admin/templates/${r.json.id}/preview`, MP4, "preview.mp4");
   ok(r.json.previewUrl?.startsWith("/m/templates/"), "template preview uploaded");
   ok((await fetch(base + r.json.previewUrl)).status === 200, "template preview publicly served");
+  const kruizId = r.json.id, previewUrl = r.json.previewUrl;
+  ok((await call(CLIENT, "DELETE", `/api/admin/templates/${kruizId}/preview`)).status === 403, "client cannot remove template media");
+  r = await call(ADMIN, "DELETE", `/api/admin/templates/${kruizId}/preview`);
+  ok(r.json.previewUrl === null && (await fetch(base + previewUrl)).status === 404, "admin removes template preview (file deleted)");
   ok(!("agentNotes" in (await call(CLIENT, "GET", "/api/catalog")).json.templates[0]), "agent notes hidden from clients");
   r = await call(ADMIN, "PUT", `/api/admin/packages/${pkg1.id}`, { title: "1 video", videos: 1, price: 175000, active: true, sortOrder: 1 });
   ok(r.json.price === 175000, "admin updates package price");
